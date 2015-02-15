@@ -1,14 +1,18 @@
 {
     Applications = "\U61c9\U7528\U7a0b\U5f0f";
+    "Bypass China Routes" = "\U7e5e\U904e\U4e2d\U570b\U5927\U9678\U5730\U5740";
     "Disable SPDY" = "\U7981\U7528 SPDY";
     "Enable Proxy" = "\U5553\U7528\U4ee3\U7406";
     "Enable to control per-app ShadowSocks proxy. Disable SPDY will allow official Twitter and Facebook app to use ShadowSocks proxy." = "\U5553\U7528\U4ee5\U63a7\U5236\U7a0b\U5f0f\U5167\U7684\U5f71\U68ad\U4ee3\U7406\U3002\U7981\U7528 SPDY \U53ef\U4f7f Twitter \U548c Facebook \U5b98\U65b9 App \U517c\U5bb9\U5f71\U68ad\U4ee3\U7406\U3002";
     Enabled = "\U5553\U7528";
+    "Force Mode" = "\U5f37\U5236\U6a21\U5f0f";
     Interface = "\U4ecb\U9762";
     "PAC File Manager" = "PAC \U6a94\U6848\U7ba1\U7406\U5668";
     "Per-App Proxy" = "\U7a0b\U5f0f\U5167\U4ee3\U7406";
     "Reverse Mode" = "\U7e5e\U884c\U6a21\U5f0f";
     "Select to enable ShadowSocks proxy in app. In Reverse Mode, selected apps will not use the proxy. Restart the app if it is running in the background." = "\U9078\U64c7\U4ee5\U5553\U7528\U7a0b\U5f0f\U5167\U7684\U5f71\U68ad\U4ee3\U7406\Uff0c\U300c\U7e5e\U884c\U6a21\U5f0f\U300d\U4e2d\U5247\U4e0d\U8d70\U4ee3\U7406\U3002\U82e5\U7a0b\U5f0f\U5728\U80cc\U666f\U904b\U884c\Uff0c\U5247\U9700\U5b8c\U5168\U95dc\U9589\U518d\U6253\U958b\U624d\U80fd\U751f\U6548\U3002";
     "System Applications" = "\U7cfb\U7d71\U7a0b\U5f0f";
+    "Use Force Mode" = "\U4f7f\U7528\U5f37\U5236\U6a21\U5f0f";
     "User Applications" = "\U7528\U6236\U7a0b\U5f0f";
+    "iOS 8 needs Force Mode to work. Apps that refuse to use system proxy settings might also work in this mode." = "iOS 8 \U9700\U555f\U7528\U8a72\U6a21\U5f0f\Uff0c\U82e5\U7a0b\U5f0f\U7121\U6cd5\U4f7f\U7528\U7cfb\U7d71\U4ee3\U7406\U4ea6\U53ef\U5617\U8a66\U8a72\U6a21\U5f0f\U3002";
 }

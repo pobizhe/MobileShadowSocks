@@ -1,0 +1,9 @@
+#define LOG_PREFIX "[proxychains] "
+
+#define PROXYCHAINS_VERSION_MAJOR 4
+#define PROXYCHAINS_VERSION_MINOR 1
+#define PROXYCHAINS_VERSION_BUGFIX 0
+#define PROXYCHAINS_MAX_PATH 256
+
+#include <stddef.h>
+

@@ -1,6 +1,6 @@
 Package: com.linusyang.ssperapp
 Name: ShadowSocks Per-App Plugin
-Depends: mobilesubstrate, preferenceloader, applist, libfinder
+Depends: mobilesubstrate, preferenceloader, applist, libfinder, com.linusyang.shadowsocks
 Version: 0.3.2
 Architecture: iphoneos-arm
 Description: control per-app ShadowSocks proxy
