@@ -1,16 +1,18 @@
 {
     Applications = Applications;
-    "Bypass China Routes" = "Bypass China Routes";
+    "Bypass China Routes" = "ChnRoutes for Chrome (iOS 8)";
     "Disable SPDY" = "Disable SPDY";
     "Enable Proxy" = "Enable Proxy";
-    "Enable to control per-app ShadowSocks proxy. Disable SPDY will allow official Twitter and Facebook app to use ShadowSocks proxy." = "Enable to control per-app ShadowSocks proxy. Disable SPDY will allow official Twitter and Facebook app to use ShadowSocks proxy.";
+    "Enable to control per-app ShadowSocks proxy. Disable SPDY will allow official Twitter and Facebook app to use ShadowSocks proxy." = "Enable to control per-app ShadowSocks proxy. Disable SPDY to allow Twitter and Facebook for proxy.";
     Enabled = Enabled;
     "Force Mode" = "Force Mode";
     Interface = Interface;
     "PAC File Manager" = "PAC File Manager";
     "Per-App Proxy" = "Per-App Proxy";
+    "Proxy Videos" = "Proxy Videos (iOS 8)";
+    "Remove Badge" = "Remove Badge";
     "Reverse Mode" = "Reverse Mode";
-    "Select to enable ShadowSocks proxy in app. In Reverse Mode, selected apps will not use the proxy. Restart the app if it is running in the background." = "Select to enable ShadowSocks proxy in app. In Reverse Mode, selected apps will not use the proxy. Restart the app if it is running in the background.";
+    "Select to enable ShadowSocks proxy in app. In Reverse Mode, selected apps will not use the proxy. Restart the app if it is running in the background." = "Select to enable ShadowSocks proxy in app. In Reverse Mode, selected apps will not use the proxy. Currently iOS 8 doesn't support PAC auto proxy.";
     "System Applications" = "System Applications";
     "Use Force Mode" = "Use Force Mode";
     "User Applications" = "User Applications";

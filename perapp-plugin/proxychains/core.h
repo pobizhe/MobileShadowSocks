@@ -151,11 +151,11 @@ extern void CFLog(int32_t level, CFStringRef format, ...);
 #endif
 
 #ifdef DEBUG
-// #ifdef __APPLE__
-// # define PDEBUG(fmt, args...) do { CFLog(kCFLogLevelWarning, CFSTR(LOG_PREFIX "DEBUG:" fmt), ## args); } while(0)
-// #else
+#ifdef __APPLE__
+# define PDEBUG(fmt, args...) do { CFLog(kCFLogLevelWarning, CFSTR(LOG_PREFIX "DEBUG:" fmt), ## args); } while(0)
+#else
 # define PDEBUG(fmt, args...) do { fprintf(stderr,"DEBUG:"fmt, ## args); fflush(stderr); } while(0)
-// #endif
+#endif
 #else
 # define PDEBUG(fmt, args...) do {} while (0)
 #endif

@@ -59,9 +59,9 @@ MSImageRef MSGetImageByName(const char *file);
 void *MSFindSymbol(MSImageRef image, const char *name);
 void MSHookFunction(void *symbol, void *replace, void **result);
 void activateProxyChains(void);
+extern int proxychains_resolver;
 
 #define PC_PATH_DEFAULT "/Applications/MobileShadowSocks.app/proxychains.conf"
-#define PC_PATH_CHNROUTE "/Applications/MobileShadowSocks.app/proxychains_chnroute.conf"
 #include "proxychains/common.h"
 char proxychains_conf_path[PROXYCHAINS_MAX_PATH];
 
@@ -72,11 +72,12 @@ char proxychains_conf_path[PROXYCHAINS_MAX_PATH];
 #endif
 
 static BOOL pluginEnabled = NO;
-static BOOL proxyEnabled = YES;
+static BOOL proxyEnabled = NO;
 static BOOL spdyDisabled = YES;
 static BOOL finderEnabled = YES;
+static BOOL removeBadge = NO;
 static BOOL useProxyChains = NO;
-static BOOL bypassChina = NO;
+static BOOL isMediaServer = NO;
 
 static BOOL getValue(NSDictionary *dict, NSString *key, BOOL defaultVal)
 {
@@ -88,6 +89,20 @@ static BOOL getValue(NSDictionary *dict, NSString *key, BOOL defaultVal)
         return defaultVal;
     }
     return [valObj boolValue];
+}
+
+static void addPrefSetting(NSMutableDictionary *response, CFStringRef prefIdentifier)
+{
+    CFArrayRef keyList = CFPreferencesCopyKeyList(prefIdentifier, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+    if (keyList == NULL) {
+        return;
+    }
+    NSDictionary *preferences = (NSDictionary *) CFPreferencesCopyMultiple(keyList, prefIdentifier, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+    CFRelease(keyList);
+    if (preferences) {
+        [response addEntriesFromDictionary:preferences];
+        [preferences release];
+    }
 }
 
 static NSDictionary *prefDictionary(void)
@@ -105,26 +120,28 @@ static void updateSettings(void)
 {
     @autoreleasepool {
         pluginEnabled = NO;
-        proxyEnabled = YES;
         spdyDisabled = YES;
         finderEnabled = YES;
-        useProxyChains = NO;
-        bypassChina = NO;
-        NSDictionary *dict = prefDictionary();
+        removeBadge = NO;
+        proxyEnabled = !SYSTEM_GE_IOS_8();
+
+        NSDictionary *dict = nil;
+        if (isMediaServer) {
+            dict = [NSMutableDictionary dictionary];
+            addPrefSetting((NSMutableDictionary *) dict, CFSTR("com.linusyang.ssperapp"));
+        } else {
+            dict = prefDictionary();
+        }
+        LOG(@"update settings: %@", dict);
         if (dict != nil) {
-            LOG(@"updating settings: %@", dict);
             pluginEnabled = getValue(dict, @"SSPerAppEnabled", NO);
             if (pluginEnabled) {
-                useProxyChains = getValue(dict, @"SSPerAppUseProxyChains", NO);
-                if (useProxyChains) {
-                    proxyEnabled = NO;
-                    bypassChina = getValue(dict, @"SSPerAppBypassChina", NO);
-                    strncpy(proxychains_conf_path, bypassChina ? PC_PATH_CHNROUTE : PC_PATH_DEFAULT, PROXYCHAINS_MAX_PATH - 1);
-                    proxychains_conf_path[PROXYCHAINS_MAX_PATH - 1] = '\0';
+                if (isMediaServer) {
+                    proxyEnabled = getValue(dict, @"SSPerAppVideo", NO);
+                    return;
                 }
-                NSString *bundleName = [[NSBundle mainBundle] bundleIdentifier];
+                NSString *bundleName = [[NSBundle mainBundle] bundleIdentifier];              
                 if (bundleName != nil) {
-                    LOG(@"my name is: %@", bundleName);
                     NSString *entry = [[NSString alloc] initWithFormat:@"Enabled-%@", bundleName];
                     if ([bundleName hasPrefix:@"com.apple.WebKit"]) {
                         proxyEnabled = getValue(dict, @"Enabled-com.apple.mobilesafari", NO);
@@ -136,13 +153,20 @@ static void updateSettings(void)
                     }
                     [entry release];
                 }
+                if (useProxyChains) {
+                    proxychains_resolver = proxyEnabled ? 1 : 0;
+                }
                 spdyDisabled = getValue(dict, @"SSPerAppDisableSPDY", YES);
                 finderEnabled = getValue(dict, @"SSPerAppFinder", YES);
+                removeBadge = getValue(dict, @"SSPerAppNoBadge", NO);
             }
-        } else {
-            LOG("failed to update settings");
         }
     }
+}
+
+static void listenSettingChanges(void)
+{
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback) updateSettings, CFSTR("com.linusyang.ssperapp.settingschanged"), NULL, CFNotificationSuspensionBehaviorCoalesce);
 }
 
 static CFDictionaryRef copyEmptyProxyDict(void)
@@ -178,7 +202,6 @@ DECL_FUNC(SCDynamicStoreCopyProxies, CFDictionaryRef, SCDynamicStoreRef store)
     } else {
         result = copyEmptyProxyDict();
     }
-    LOG(@"override SCDynamicStoreCopyProxies: %@", result);
     return result;
 }
 
@@ -189,7 +212,6 @@ DECL_FUNC(CFReadStreamOpen, Boolean, CFReadStreamRef stream)
         CFReadStreamSetProperty(stream, kCFStreamPropertySOCKSProxy, socksConfig);
         CFRelease(socksConfig);
     }
-    LOG(@"override CFReadStreamOpen, proxyEnabled: %d", proxyEnabled);
     return original_CFReadStreamOpen(stream);
 }
 
@@ -200,7 +222,6 @@ DECL_FUNC(CFWriteStreamOpen, Boolean, CFWriteStreamRef stream)
         CFWriteStreamSetProperty(stream, kCFStreamPropertySOCKSProxy, socksConfig);
         CFRelease(socksConfig);
     }
-    LOG(@"override CFWriteStreamOpen, proxyEnabled: %d", proxyEnabled);
     return original_CFWriteStreamOpen(stream);
 }
 
@@ -231,7 +252,7 @@ typedef enum {
 - (ProxyOperation)_currentProxyOperation;
 @end
 
-%group FinderHook
+%group ShadowHook
 
 %hook SettingTableViewController
 - (BOOL)useLibFinder
@@ -256,12 +277,22 @@ typedef enum {
 %hook ProxyManager
 - (ProxyOperationStatus)_sendProxyOperation:(ProxyOperation)op updateOnlyChanged:(BOOL)updateOnlyChanged
 {
-    if (useProxyChains && op <= kProxyOperationEnablePac) {
+    if (SYSTEM_GE_IOS_8() && pluginEnabled && op <= kProxyOperationEnablePac) {
         if ([self _currentProxyOperation] == kProxyOperationDisableProxy) {
             return kProxyOperationSuccess;
         }
     }
     return %orig;
+}
+%end
+
+%hook SettingTableViewController
+- (void)setBadge:(BOOL)enabled
+{
+    if (removeBadge) {
+        enabled = NO;
+    }
+    %orig;
 }
 %end
 
@@ -381,28 +412,12 @@ typedef enum {
     rocketbootstrap_distributedmessagingcenter_apply(center);
     [center registerForMessageName:@"com.linusyang.sspref.fetch" target:self selector:@selector(handleSSPerAppMessage:userInfo:)];
     [center runServerOnCurrentThread];
-    LOG("registered: SSPerApp setting service");
     return self;
-}
-
-static void addPrefSetting(NSMutableDictionary *response, CFStringRef prefIdentifier)
-{
-    CFArrayRef keyList = CFPreferencesCopyKeyList(prefIdentifier, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
-    if (keyList == NULL) {
-        return;
-    }
-    NSDictionary *preferences = (NSDictionary *) CFPreferencesCopyMultiple(keyList, prefIdentifier, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
-    CFRelease(keyList);
-    if (preferences) {
-        [response addEntriesFromDictionary:preferences];
-        [preferences release];
-    }
 }
 
 %new
 - (NSDictionary *)handleSSPerAppMessage:(NSString *)name userInfo:(NSDictionary *)userInfo
 {
-    LOG("received: fetch SSPerApp settings message");
     NSMutableDictionary *response = [NSMutableDictionary dictionary];
     addPrefSetting(response, CFSTR("com.linusyang.ssperapp"));
     return response;
@@ -415,44 +430,71 @@ static void addPrefSetting(NSMutableDictionary *response, CFStringRef prefIdenti
 %ctor
 {
     @autoreleasepool {
+        // Check bundle name
         NSString *bundleName = [[NSBundle mainBundle] bundleIdentifier];
         if (bundleName == nil) {
-            LOG("not a normal app, exit");
+            LOG("not a bundled app, exit");
             return;
         }
-        if (SYSTEM_GE_IOS_8() && [bundleName isEqualToString:@"com.apple.springboard"]) {
-            %init(SBService);
-        } else {
-            updateSettings();
-            CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback) updateSettings, CFSTR("com.linusyang.ssperapp.settingschanged"), NULL, CFNotificationSuspensionBehaviorCoalesce);
-            if ([bundleName isEqualToString:@"com.linusyang.MobileShadowSocks"]) {
-                LOG("hook shadow app");
-                %init(FinderHook);
-            } else if (![bundleName isEqualToString:@"shadowsocks"]) {
-                if (pluginEnabled) {
-                    if (useProxyChains) {
-                        if (proxyEnabled) {
-                            LOG("proxychains mode");
-                            activateProxyChains();
-                            HOOK_SIMPLE(CFReadStreamOpen);
-                            HOOK_SIMPLE(CFWriteStreamOpen);
-                        }
-                    } else {
-                        LOG("hook SCDynamicStoreCopyProxies");
-                        MSImageRef image;
-                        LOAD_IMAGE(image, "/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration");
-                        HOOK_FUNC(SCDynamicStoreCopyProxies, image);
-                    }
-                }
-                if ([bundleName isEqualToString:@"com.atebits.Tweetie2"]) {
-                    LOG("hook twitter");
-                    %init(TwitterHook);
-                } else if ([bundleName isEqualToString:@"com.facebook.Facebook"] ||
-                           [bundleName isEqualToString:@"com.facebook.Messenger"]) {
-                    LOG("hook facebook");
-                    %init(FacebookHook);
-                }
+        isMediaServer = [bundleName isEqualToString:@"com.apple.mediaserverd"];
+        if (isMediaServer && !SYSTEM_GE_IOS_8()) {
+            return;
+        }
+        LOG(@"hooking %@", bundleName);
+
+        // iOS 8 settings
+        if (SYSTEM_GE_IOS_8()) {
+            // Springboard service init
+            if ([bundleName isEqualToString:@"com.apple.springboard"]) {
+                %init(SBService);
+                return;
             }
+
+            // Proxychains init
+            proxychains_resolver = 0;
+            strncpy(proxychains_conf_path, PC_PATH_DEFAULT, PROXYCHAINS_MAX_PATH - 1);
+            proxychains_conf_path[PROXYCHAINS_MAX_PATH - 1] = '\0';
+            if ([bundleName isEqualToString:@"com.google.chrome.ios"]) {
+                useProxyChains = YES;                
+            }
+        }
+
+        // Update settings
+        updateSettings();
+
+        // Hook special apps
+        if ([bundleName isEqualToString:@"com.linusyang.MobileShadowSocks"]) {
+            LOG("hook shadow app");
+            listenSettingChanges();
+            %init(ShadowHook);
+            return;
+        }
+        if ([bundleName isEqualToString:@"shadowsocks"]) {
+            // Do nothing for App Store version shadowsocks
+            return;
+        }
+        if ([bundleName isEqualToString:@"com.atebits.Tweetie2"]) {
+            LOG("hook twitter");
+            %init(TwitterHook);
+        } else if ([bundleName isEqualToString:@"com.facebook.Facebook"] ||
+                   [bundleName isEqualToString:@"com.facebook.Messenger"]) {
+            LOG("hook facebook");
+            %init(FacebookHook);
+        }
+
+        // Deploy proxy hooks
+        LOG("deploy proxy hooks");
+        if (SYSTEM_GE_IOS_8()) {
+            listenSettingChanges();
+            if (useProxyChains) {
+                activateProxyChains();
+            }
+            HOOK_SIMPLE(CFReadStreamOpen);
+            HOOK_SIMPLE(CFWriteStreamOpen);
+        } else {
+            MSImageRef image;
+            LOAD_IMAGE(image, "/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration");
+            HOOK_FUNC(SCDynamicStoreCopyProxies, image);
         }
     }
 }

@@ -286,9 +286,9 @@ static int get_chain_data(proxy_data * pd, unsigned int *proxy_count, chain_type
                     len = atoi(++pc);
                     proxychains_max_chain = (unsigned int) (len ? len : 1);
                 } else if(strstr(buff, "quiet_mode")) {
+#ifndef DEBUG
                     proxychains_quiet_mode = 1;
-                } else if(strstr(buff, "proxy_dns")) {
-                    proxychains_resolver = 1;
+#endif
                 }
             }
         }
@@ -302,6 +302,10 @@ static int get_chain_data(proxy_data * pd, unsigned int *proxy_count, chain_type
 /*******  HOOK FUNCTIONS  *******/
 
 static int custom_connect(int sock, const struct sockaddr *addr, socklen_t len) {
+    if (!proxychains_resolver) {
+        return true_connect(sock, addr, len);
+    }
+
     int socktype = 0, flags = 0, ret = 0;
     socklen_t optlen = 0;
     ip_type dest_ip;

@@ -1,0 +1,4 @@
+#!/bin/sh
+/bin/launchctl stop com.apple.mediaserverd
+/bin/launchctl start com.apple.mediaserverd
+exit 0
