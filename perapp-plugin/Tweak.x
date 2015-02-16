@@ -116,6 +116,38 @@ static NSDictionary *prefDictionary(void)
     }
 }
 
+static void checkAndDisableGlobalProxy(void)
+{
+    CFDictionaryRef proxyDict = CFNetworkCopySystemProxySettings();
+    BOOL pacEnabled = [[(NSDictionary *) proxyDict objectForKey:@"ProxyAutoConfigEnable"] boolValue];
+    BOOL socksEnabled = [[(NSDictionary *) proxyDict objectForKey:@"SOCKSEnable"] boolValue];
+    CFRelease(proxyDict);
+
+    // Exit if already disabled
+    if (!(pacEnabled || socksEnabled)) {
+        return;
+    }
+
+    // Disable global proxy
+    NSMutableURLRequest* request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"http://127.0.0.1:1993/proxy.pac"]];
+    [request setValue:@"True" forHTTPHeaderField:@"SetProxy-None"];
+    [request setTimeoutInterval:3.0];
+    for (int i = 0; i < 5; i++) {
+        NSData *data = [NSURLConnection sendSynchronousRequest:request returningResponse:nil error:nil];
+        if (data == nil) {
+            continue;
+        }
+        NSString *str = [[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] autorelease];
+        if ([str hasPrefix:@"Updated."]) {
+            LOG("Global proxy disabled");
+            break;
+        } else if ([str hasPrefix:@"Failed."]) {
+            LOG("Failed to disable global proxy");
+            break;
+        }
+    }
+}
+
 static void updateSettings(void)
 {
     @autoreleasepool {
@@ -141,6 +173,9 @@ static void updateSettings(void)
             if (pluginEnabled) {
                 if (isMediaServer) {
                     proxyEnabled = getValue(dict, @"SSPerAppVideo", NO);
+                    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                        checkAndDisableGlobalProxy();
+                    });
                     return;
                 }
                 NSString *bundleName = [[NSBundle mainBundle] bundleIdentifier];              
@@ -289,6 +324,7 @@ typedef enum {
         if ([self _currentProxyOperation] == kProxyOperationDisableProxy) {
             return kProxyOperationSuccess;
         }
+        op = kProxyOperationDisableProxy;
     }
     return %orig;
 }
