@@ -22,6 +22,7 @@
 #define ROCKETBOOTSTRAP_LOAD_DYNAMIC
 #import "rocket/rocketbootstrap.h"
 #import <AppSupport/CPDistributedMessagingCenter.h>
+#import <mach-o/dyld.h>
 
 #ifndef kCFCoreFoundationVersionNumber_iOS_8_0
 #define kCFCoreFoundationVersionNumber_iOS_8_0 1140.10
@@ -157,14 +158,18 @@ static void updateSettings(void)
         removeBadge = NO;
         proxyEnabled = !SYSTEM_GE_IOS_8();
 
+        const char *path = _dyld_get_image_name(0);
+        NSString *imagePath = path ? [NSString stringWithUTF8String:path] : @"unknown";
+        BOOL isApp = [imagePath hasPrefix:@"/private/var/db/stash"] || [imagePath hasPrefix:@"/private/var/mobile"];
         NSDictionary *dict = nil;
-        if (isMediaServer) {
+        if (isApp) {
+            dict = prefDictionary();
+        } else {
             dict = [NSMutableDictionary dictionary];
             addPrefSetting((NSMutableDictionary *) dict, CFSTR("com.linusyang.ssperapp"));
-        } else {
-            dict = prefDictionary();
         }
-        LOG(@"update settings: %@", dict);
+
+        LOG(@"%@ update settings: %@", imagePath, dict);
         if (dict != nil) {
             pluginEnabled = getValue(dict, @"SSPerAppEnabled", NO);
             spdyDisabled = getValue(dict, @"SSPerAppDisableSPDY", YES);

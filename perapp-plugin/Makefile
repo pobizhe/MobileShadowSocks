@@ -19,7 +19,7 @@ export PATH := $(shell pwd)/../extra:$(PATH)
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
-VERSION.INC_BUILD_NUMBER = 4
+VERSION.INC_BUILD_NUMBER = 5
 
 stage::
 	find "$(THEOS_STAGING_DIR)" -type f \( -iname "*.strings" -o -iname "*.plist" \) -exec plutil -convert binary1 {} \;
