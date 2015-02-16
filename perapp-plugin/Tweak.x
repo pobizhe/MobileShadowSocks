@@ -135,6 +135,9 @@ static void updateSettings(void)
         LOG(@"update settings: %@", dict);
         if (dict != nil) {
             pluginEnabled = getValue(dict, @"SSPerAppEnabled", NO);
+            spdyDisabled = getValue(dict, @"SSPerAppDisableSPDY", YES);
+            finderEnabled = getValue(dict, @"SSPerAppFinder", YES);
+            removeBadge = getValue(dict, @"SSPerAppNoBadge", NO);
             if (pluginEnabled) {
                 if (isMediaServer) {
                     proxyEnabled = getValue(dict, @"SSPerAppVideo", NO);
@@ -156,9 +159,6 @@ static void updateSettings(void)
                 if (useProxyChains) {
                     proxychains_resolver = proxyEnabled ? 1 : 0;
                 }
-                spdyDisabled = getValue(dict, @"SSPerAppDisableSPDY", YES);
-                finderEnabled = getValue(dict, @"SSPerAppFinder", YES);
-                removeBadge = getValue(dict, @"SSPerAppNoBadge", NO);
             }
         }
     }
@@ -267,6 +267,14 @@ typedef enum {
     return finder;
 }
 
+- (void)setBadge:(BOOL)enabled
+{
+    if (removeBadge) {
+        enabled = NO;
+    }
+    %orig;
+}
+
 %new
 -(void)finder:(LFFinderController*)finder didSelectItemAtPath:(NSString*)path
 {
@@ -283,16 +291,6 @@ typedef enum {
         }
     }
     return %orig;
-}
-%end
-
-%hook SettingTableViewController
-- (void)setBadge:(BOOL)enabled
-{
-    if (removeBadge) {
-        enabled = NO;
-    }
-    %orig;
 }
 %end
 
