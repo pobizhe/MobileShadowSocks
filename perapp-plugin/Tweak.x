@@ -59,12 +59,45 @@ typedef const void *MSImageRef;
 MSImageRef MSGetImageByName(const char *file);
 void *MSFindSymbol(MSImageRef image, const char *name);
 void MSHookFunction(void *symbol, void *replace, void **result);
-void activateProxyChains(void);
-extern int proxychains_resolver;
 
 #define PC_PATH_DEFAULT "/Applications/MobileShadowSocks.app/proxychains.conf"
 #include "proxychains/common.h"
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+typedef union {
+    unsigned char octet[4];
+    uint32_t as_int;
+} ip_type;
+
+typedef enum {
+    HTTP_TYPE,
+    SOCKS4_TYPE,
+    SOCKS5_TYPE
+} proxy_type;
+
+typedef enum {
+    PLAY_STATE,
+    DOWN_STATE,
+    BLOCKED_STATE,
+    BUSY_STATE
+} proxy_state;
+
+typedef struct {
+    ip_type ip;
+    unsigned short port;
+    proxy_type pt;
+    proxy_state ps;
+    char user[256];
+    char pass[256];
+} proxy_data;
+
 char proxychains_conf_path[PROXYCHAINS_MAX_PATH];
+void activateProxyChains(void);
+extern int proxychains_resolver;
+extern int proxychains_default_port;
+extern proxy_data proxychains_pd[MAX_CHAIN];
 
 #ifdef DEBUG
 #define LOG(...) NSLog(@"SSPerApp: " __VA_ARGS__)
@@ -80,6 +113,9 @@ static BOOL removeBadge = NO;
 static BOOL useProxyChains = NO;
 static BOOL isMediaServer = NO;
 
+#define DEFAULT_PORT 1983
+static int proxyPort = DEFAULT_PORT;
+
 static BOOL getValue(NSDictionary *dict, NSString *key, BOOL defaultVal)
 {
     if (dict == nil || key == nil) {
@@ -90,6 +126,18 @@ static BOOL getValue(NSDictionary *dict, NSString *key, BOOL defaultVal)
         return defaultVal;
     }
     return [valObj boolValue];
+}
+
+static int getIntValue(NSDictionary *dict, NSString *key, int defaultVal)
+{
+    if (dict == nil || key == nil) {
+        return defaultVal;
+    }
+    NSString *valObj = [dict objectForKey:key];
+    if (valObj == nil) {
+        return defaultVal;
+    }
+    return [valObj intValue];
 }
 
 static void addPrefSetting(NSMutableDictionary *response, CFStringRef prefIdentifier)
@@ -176,6 +224,11 @@ static void updateSettings(void)
             finderEnabled = getValue(dict, @"SSPerAppFinder", YES);
             removeBadge = getValue(dict, @"SSPerAppNoBadge", NO);
             if (pluginEnabled) {
+                proxyPort = getIntValue(dict, @"SSPerAppSocksPort", DEFAULT_PORT);
+                if (proxyPort <= 0 || proxyPort > 65535) {
+                    proxyPort = DEFAULT_PORT;
+                }
+                LOG("Using proxy port: %d", proxyPort);
                 if (isMediaServer) {
                     proxyEnabled = getValue(dict, @"SSPerAppVideo", NO);
                     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -198,6 +251,8 @@ static void updateSettings(void)
                 }
                 if (useProxyChains) {
                     proxychains_resolver = proxyEnabled ? 1 : 0;
+                    proxychains_default_port = proxyPort;
+                    proxychains_pd[0].port = htons((unsigned short) proxyPort);
                 }
             }
         }
@@ -225,7 +280,7 @@ static CFDictionaryRef copyEmptyProxyDict(void)
 static CFDictionaryRef copySocksProxyDict(void)
 {
     CFMutableDictionaryRef proxyDict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-    int port = 1983;
+    int port = proxyPort;
     CFNumberRef portNumber = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &port);
     CFDictionarySetValue(proxyDict, kCFStreamPropertySOCKSProxyHost, CFSTR("127.0.0.1"));
     CFDictionarySetValue(proxyDict, kCFStreamPropertySOCKSProxyPort, portNumber);
@@ -494,7 +549,7 @@ typedef enum {
             strncpy(proxychains_conf_path, PC_PATH_DEFAULT, PROXYCHAINS_MAX_PATH - 1);
             proxychains_conf_path[PROXYCHAINS_MAX_PATH - 1] = '\0';
             if ([bundleName isEqualToString:@"com.google.chrome.ios"]) {
-                useProxyChains = YES;                
+                useProxyChains = YES;
             }
         }
 

@@ -42,7 +42,6 @@
 #define     SOCKADDR_2(x)     (satosin(x)->sin_addr)
 #define     SOCKPORT(x)     (satosin(x)->sin_port)
 #define     SOCKFAMILY(x)     (satosin(x)->sin_family)
-#define     MAX_CHAIN 512
 
 connect_t true_connect;
 gethostbyname_t true_gethostbyname;
@@ -75,6 +74,7 @@ int tcp_connect_time_out;
 int proxychains_got_chain_data = 0;
 int proxychains_quiet_mode = 0;
 int proxychains_resolver = 0;
+int proxychains_default_port = 0;
 
 unsigned int proxychains_proxy_count = 0;
 unsigned int proxychains_max_chain = 1;
@@ -203,6 +203,9 @@ static int get_chain_data(proxy_data * pd, unsigned int *proxy_count, chain_type
                 port_n = 0;
 
                 sscanf(buff, "%s %s %d %s %s", type, host, &port_n, pd[count].user, pd[count].pass);
+                if (port_n == 0) {
+                    port_n = proxychains_default_port;
+                }
 
                 pd[count].ip.as_int = (uint32_t) inet_addr(host);
                 pd[count].port = htons((unsigned short) port_n);

@@ -1,6 +1,7 @@
 {
     Applications = Applications;
     "Bypass China Routes" = "ChnRoutes for Chrome (iOS 8)";
+    "Custom Port" = "Custom Port (iOS 8)";
     "Disable SPDY" = "Disable SPDY";
     "Enable Proxy" = "Enable Proxy";
     "Enable to control per-app ShadowSocks proxy. Disable SPDY will allow official Twitter and Facebook app to use ShadowSocks proxy." = "Enable to control per-app ShadowSocks proxy. Disable SPDY to allow Twitter and Facebook for proxy.";

@@ -86,6 +86,22 @@
 			<string>Proxy Videos</string>
 		</dict>
 		<dict>
+			<key>PostNotification</key>
+			<string>com.linusyang.ssperapp.settingschanged</string>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>defaults</key>
+			<string>com.linusyang.ssperapp</string>
+			<key>isNumeric</key>
+			<true/>
+			<key>key</key>
+			<string>SSPerAppSocksPort</string>
+			<key>label</key>
+			<string>Custom Port</string>
+			<key>placeholder</key>
+			<string>1983</string>
+		</dict>
+		<dict>
 			<key>ALAllowsSelection</key>
 			<string>1</string>
 			<key>ALChangeNotification</key>
