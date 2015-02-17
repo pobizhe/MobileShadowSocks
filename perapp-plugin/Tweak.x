@@ -62,9 +62,6 @@ void MSHookFunction(void *symbol, void *replace, void **result);
 
 #define PC_PATH_DEFAULT "/Applications/MobileShadowSocks.app/proxychains.conf"
 #include "proxychains/common.h"
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
 
 typedef union {
     unsigned char octet[4];
