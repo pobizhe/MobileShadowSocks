@@ -1,12 +1,10 @@
 # Shadowsocks per-app plugin
 # Copyright (c) 2014 Linus Yang
 
-THEOS := /opt/theos
-
 TARGET = iphone:clang:latest:5.0
 ARCHS = armv7 armv7s arm64
 
-include $(THEOS)/makefiles/common.mk
+include theos/makefiles/common.mk
 
 TWEAK_NAME = SSPerApp
 SSPerApp_FILES = Tweak.x $(wildcard proxychains/*.c)

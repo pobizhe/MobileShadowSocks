@@ -73,6 +73,7 @@ Use the following command to download the project and build the main app:
 ```bash
 git clone --recursive https://github.com/linusyang/MobileShadowSocks.git
 cd MobileShadowSocks
+ln -s /opt/theos perapp-plugin/theos
 make
 ```
 
