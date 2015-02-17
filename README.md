@@ -45,8 +45,8 @@ No. The daemon uses the "__On Demand__" mechanism of `launchd`, which means it i
 #### 5. I cannot find any proxy settings in *Settings*. Is the proxy actually enabled? And where are the proxy settings?
 The proxy settings are **indeed** set successfully if you don't see any alert views when turning on the switch. Sometimes they just don't show in the Settings (or wrongly show in the proxy for VPN). For advanced users, try `scutil --proxy` to check proxy status in terminal.
 
-#### 6. My device is iOS 5 and has installed the version from Cydia. But why does the app show an earlier version?
-The version in Cydia has removed the support for iOS 5 and fall back to a legacy version. Please try to find the iOS 5 compatible builds in the [Releases](https://github.com/linusyang/MobileShadowSocks/releases) section.
+#### 6. My device uses iOS 5.x and has installed the app from Cydia. But why does it show an earlier version in the about?
+The version in Cydia has removed the support for iOS 5.x and fall back to a legacy version. Please try to find the iOS 5.x compatible builds with new functions in the [Releases](https://github.com/linusyang/MobileShadowSocks/releases) section.
 
 ### Credits
 * [Shadowsocks](https://github.com/clowwindy/shadowsocks) project created by @[clowwindy](https://github.com/clowwindy)
