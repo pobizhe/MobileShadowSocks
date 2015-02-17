@@ -203,15 +203,19 @@ static void updateSettings(void)
         removeBadge = NO;
         proxyEnabled = !SYSTEM_GE_IOS_8();
 
-        const char *path = _dyld_get_image_name(0);
-        NSString *imagePath = path ? [NSString stringWithUTF8String:path] : @"unknown";
-        BOOL isApp = [imagePath hasPrefix:@"/private/var/db/stash"] || [imagePath hasPrefix:@"/private/var/mobile"];
         NSDictionary *dict = nil;
-        if (isApp) {
-            dict = prefDictionary();
+        if (SYSTEM_GE_IOS_8()) {
+            const char *path = _dyld_get_image_name(0);
+            NSString *imagePath = path ? [NSString stringWithUTF8String:path] : @"unknown";
+            BOOL isApp = [imagePath hasPrefix:@"/private/var/db/stash"] || [imagePath hasPrefix:@"/private/var/mobile"];
+            if (isApp) {
+                dict = prefDictionary();
+            } else {
+                dict = [NSMutableDictionary dictionary];
+                addPrefSetting((NSMutableDictionary *) dict, CFSTR("com.linusyang.ssperapp"));
+            }
         } else {
-            dict = [NSMutableDictionary dictionary];
-            addPrefSetting((NSMutableDictionary *) dict, CFSTR("com.linusyang.ssperapp"));
+            dict = prefDictionary();
         }
 
         LOG(@"%@ update settings: %@", imagePath, dict);
@@ -552,11 +556,11 @@ typedef enum {
 
         // Update settings
         updateSettings();
+        listenSettingChanges();
 
         // Hook special apps
         if ([bundleName isEqualToString:@"com.linusyang.MobileShadowSocks"]) {
             LOG("hook shadow app");
-            listenSettingChanges();
             %init(ShadowHook);
             return;
         }
@@ -564,6 +568,8 @@ typedef enum {
             // Do nothing for App Store version shadowsocks
             return;
         }
+
+        // Disable SPDY protocol
         if ([bundleName isEqualToString:@"com.atebits.Tweetie2"]) {
             LOG("hook twitter");
             %init(TwitterHook);
@@ -576,7 +582,6 @@ typedef enum {
         // Deploy proxy hooks
         LOG("deploy proxy hooks");
         if (SYSTEM_GE_IOS_8()) {
-            listenSettingChanges();
             if (useProxyChains) {
                 activateProxyChains();
             }
